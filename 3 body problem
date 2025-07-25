@@ -1,0 +1,99 @@
+from vpython import *
+import pandas as pd
+# The three body problem 
+
+G=6.67e-11 # Gravitational constant 
+m= 7.3476e+22 # mass of the moon in kg  
+
+rem= 384.4e+6 # distances from Earth to moon
+
+#define shape, position, radius and color
+ma=sphere(pos=(vector(0,0,0)), radius=rem/20,make_trail= True, color=color.blue)
+mb=sphere(pos=(vector(rem,0.8*rem,0)),radius=rem/18,make_trail= True, color=color.red)
+mc=sphere(pos=(vector(1.5*rem,0,0)),radius=rem/15,make_trail= True,color=color.green)
+
+# define mass
+
+ma.m=m
+mb.m=m
+mc.m=m
+
+# define momentum
+
+ma.p=ma.m*vector(-100,100,0)
+mb.p=mb.m*vector(100,100,0)
+mc.p=mc.m*vector(-100,100,0)
+
+t=0
+deltat=3600
+
+tmax=24*deltat*30
+
+# scene.autoscale = False
+scene.center = (ma.pos + mb.pos + mc.pos) / 3
+scene.pause()
+
+# store values
+total_energy =[]
+total_momentum =[]
+times=[]
+
+while t<24*tmax:
+  rate(200)
+  
+  #calculate the position vectors
+  rab=mb.pos-ma.pos
+  rac=mc.pos-ma.pos
+  rbc=mc.pos-mb.pos
+  
+  # Calculate forces
+  Fab=-G*ma.m*mb.m*norm(rab)/mag(rab)**2
+  Fac=-G*ma.m*mc.m*norm(rac)/mag(rac)**2
+  Fbc=-G*mb.m*mc.m*norm(rbc)/mag(rbc)**2
+ 
+  
+  # update the momentum
+  ma.p=ma.p+(-Fab-Fac)*deltat
+  mb.p=mb.p+(Fab-Fbc)*deltat
+  mc.p=mc.p+(Fac+Fbc)*deltat
+  
+  # update position
+  ma.pos=ma.pos+ma.p*deltat/ma.m
+  mb.pos=mb.pos+mb.p*deltat/mb.m
+  mc.pos=mc.pos+mc.p*deltat/mc.m
+  
+  # Calculate the center of mass
+  total_mass = ma.m + mb.m + mc.m
+  com = (ma.pos * ma.m + mb.pos * mb.m + mc.pos * mc.m) / total_mass
+
+  # Update the camera center to follow center of mass
+  scene.center = com
+
+  # kinetic energy
+  KE= (mag(ma.p)**2) / (2*ma.m) + mag(mb.p)**2 / (2 * mb.m) + (mag(mc.p)**2 / (2 * mc.m))
+ 
+  # Potential energy
+  PE = (-G * ma.m * mb.m / mag(mb.pos - ma.pos) -G * ma.m * mc.m / mag(mc.pos - ma.pos) -G * mb.m * mc.m / mag(mc.pos - mb.pos))
+  
+  # Total energy
+  E = KE + PE
+  total_energy.append(E)
+
+  # Total linear momentum
+  P_total = ma.p + mb.p + mc.p
+  total_momentum.append(mag(P_total))
+
+  # Time
+  times.append(t) 
+  
+  t=t+deltat
+
+df = pd.DataFrame({
+    'Time (s)': times,
+    'Total Energy (J)': total_energy,
+    'Total Momentum (kg·m/s)': total_momentum
+})
+print(df)
+df.to_csv("three_body_energy_momentum.csv", index=False)
+print("Data saved to 'three_body_energy_momentum.csv'")
+
